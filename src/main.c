@@ -229,6 +229,8 @@ static void update_battery(Layer *layer, GContext *ctx) {
   int img_index;
   if (charge_state.is_charging) {
     img_index = 11;
+  } else if (charge_state.is_plugged) {
+    img_index = 12;
   } else {
     img_index = charge_state.charge_percent / 10;
   }
@@ -280,7 +282,7 @@ static void main_window_load(Window *window) {
   battery_layer = layer_create(battery_frame);
   layer_add_child(main_window_layer, battery_layer);
   layer_set_update_proc(battery_layer, update_battery);
-  
+
   GRect date_rect = GRect(X_OFFSET, DATE_Y_OFFSET, bounds.size.w - bt_frame.size.w - battery_frame.size.w - (X_OFFSET + ICON_OFFSET) * 2, DATE_HEIGHT);
   date_layer = text_layer_create(date_rect);
   text_layer_set_text_alignment(date_layer, GTextAlignmentLeft);

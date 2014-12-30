@@ -1,4 +1,5 @@
 #include <pebble.h>
+#include <time.h>
 
 #define DOT_SIZE 9
 #define X_OFFSET 5
@@ -12,6 +13,12 @@
 
 #define BT_WIDTH 7
 #define BT_HEIGHT 11
+
+#define DATE_HEIGHT 21
+
+#define DATE_Y_OFFSET -2
+#define DATE_FORMAT "%a %D"
+#define DATE_BUFFER_LEN 30
 
 static const int maze_background[MAZE_SIZE] = {
   0b000001000010010,
@@ -98,9 +105,12 @@ static Window *main_window;
 static Layer *maze_layer;
 static Layer *battery_layer;
 static Layer *bt_layer;
+static TextLayer *date_layer;
 
 static GBitmap *bmp_bt;
 static GBitmap *bmp_battery;
+
+static char date_buffer[DATE_BUFFER_LEN];
 
 static void load_resources() {
   bmp_bt = gbitmap_create_with_resource(RESOURCE_ID_BT);
@@ -226,8 +236,19 @@ static void update_battery(Layer *layer, GContext *ctx) {
   draw_battery(ctx, img_index);
 }
 
+static void update_date() {
+  time_t temp = time(NULL);
+  struct tm *tick_time = localtime(&temp);
+
+  memset(date_buffer, 0, DATE_BUFFER_LEN);
+  strftime(date_buffer, DATE_BUFFER_LEN, DATE_FORMAT, tick_time);
+
+  text_layer_set_text(date_layer, date_buffer);
+}
+
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   layer_mark_dirty(maze_layer);
+  update_date();
 }
 
 static void bt_handler(bool connected) {
@@ -255,15 +276,25 @@ static void main_window_load(Window *window) {
   layer_add_child(main_window_layer, bt_layer);
   layer_set_update_proc(bt_layer, update_bt);
 
-  GRect battery_rect = GRect(bounds.size.w - BATTERY_WIDTH - X_OFFSET, Y_OFFSET + (BT_HEIGHT - BATTERY_HEIGHT) / 2, BATTERY_WIDTH, BATTERY_HEIGHT);
-  battery_layer = layer_create(battery_rect);
+  GRect battery_frame = GRect(bounds.size.w - BATTERY_WIDTH - X_OFFSET, Y_OFFSET + (BT_HEIGHT - BATTERY_HEIGHT) / 2, BATTERY_WIDTH, BATTERY_HEIGHT);
+  battery_layer = layer_create(battery_frame);
   layer_add_child(main_window_layer, battery_layer);
   layer_set_update_proc(battery_layer, update_battery);
+  
+  GRect date_rect = GRect(X_OFFSET, DATE_Y_OFFSET, bounds.size.w - bt_frame.size.w - battery_frame.size.w - (X_OFFSET + ICON_OFFSET) * 2, DATE_HEIGHT);
+  date_layer = text_layer_create(date_rect);
+  text_layer_set_text_alignment(date_layer, GTextAlignmentLeft);
+  text_layer_set_text_color(date_layer, GColorWhite);
+  text_layer_set_background_color(date_layer, GColorBlack);
+  text_layer_set_font(date_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+  layer_add_child(main_window_layer, text_layer_get_layer(date_layer));
 }
 
 static void main_window_unload(Window *window) {
-  layer_destroy(bt_layer);
   layer_destroy(maze_layer);
+  layer_destroy(bt_layer);
+  layer_destroy(battery_layer);
+  text_layer_destroy(date_layer);
 
   destroy_resources();
 }

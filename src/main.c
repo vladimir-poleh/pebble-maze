@@ -3,8 +3,15 @@
 #define DOT_SIZE 9
 #define X_OFFSET 5
 #define Y_OFFSET 5
+#define ICON_OFFSET 3
 #define MAZE_SIZE 15
 #define DIGIT_SIZE 5
+
+#define BATTERY_WIDTH 15
+#define BATTERY_HEIGHT 7
+
+#define BT_WIDTH 7
+#define BT_HEIGHT 11
 
 static const int maze_background[MAZE_SIZE] = {
   0b000001000010010,
@@ -89,13 +96,20 @@ static const int digits[10][DIGIT_SIZE] = {
 
 static Window *main_window;
 static Layer *maze_layer;
+static Layer *battery_layer;
+static Layer *bt_layer;
+
+static GBitmap *bmp_bt;
+static GBitmap *bmp_battery;
 
 static void load_resources() {
-
+  bmp_bt = gbitmap_create_with_resource(RESOURCE_ID_BT);
+  bmp_battery = gbitmap_create_with_resource(RESOURCE_ID_BATTERY);
 }
 
 static void destroy_resources() {
-
+  gbitmap_destroy(bmp_bt);
+  gbitmap_destroy(bmp_battery);
 }
 
 static void draw_dot(GContext *ctx, int x, int y, bool show) {
@@ -154,7 +168,7 @@ static void update_main_layer(Layer *layer, GContext* ctx) {
 static void draw_time(GContext *ctx) {
   time_t temp = time(NULL);
   struct tm *tick_time = localtime(&temp);
-  
+
   int hours = tick_time->tm_hour;
   if (!clock_is_24h_style()) {
     hours = hours % 12;
@@ -175,13 +189,53 @@ static void draw_time(GContext *ctx) {
   draw_digit(ctx, min_unit, 1, 1);
 }
 
+static void draw_battery(GContext *ctx, int index) {
+  GRect img_rect = GRect(0, BATTERY_HEIGHT * index, BATTERY_WIDTH, BATTERY_HEIGHT);
+  GBitmap *img = gbitmap_create_as_sub_bitmap(bmp_battery, img_rect);
+
+  graphics_draw_bitmap_in_rect(ctx, img, GRect(0, 0, BATTERY_WIDTH, BATTERY_HEIGHT));
+
+  gbitmap_destroy(img);
+}
+
 static void update_maze(Layer *layer, GContext *ctx) {
   draw_maze_background(ctx, layer);
   draw_time(ctx);
 }
 
+static void update_bt(Layer *layer, GContext *ctx) {
+  GRect rect = GRect(0, 0, BT_WIDTH, BT_HEIGHT);
+
+  if (bluetooth_connection_service_peek()) {
+    graphics_draw_bitmap_in_rect(ctx, bmp_bt, rect);
+  } else {
+    graphics_context_set_fill_color(ctx, GColorBlack);
+    graphics_fill_rect(ctx, rect, 0, GCornerNone);
+  }
+}
+
+static void update_battery(Layer *layer, GContext *ctx) {
+  BatteryChargeState charge_state = battery_state_service_peek();
+  int img_index;
+  if (charge_state.is_charging) {
+    img_index = 11;
+  } else {
+    img_index = charge_state.charge_percent / 10;
+  }
+
+  draw_battery(ctx, img_index);
+}
+
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   layer_mark_dirty(maze_layer);
+}
+
+static void bt_handler(bool connected) {
+  layer_mark_dirty(bt_layer);
+}
+
+static void battery_handler(BatteryChargeState charge_state) {
+  layer_mark_dirty(battery_layer);
 }
 
 static void main_window_load(Window *window) {
@@ -191,13 +245,26 @@ static void main_window_load(Window *window) {
   layer_set_update_proc(main_window_layer, update_main_layer);
   GRect bounds = layer_get_bounds(main_window_layer);
 
-  GRect frame = GRect(X_OFFSET, bounds.size.h - Y_OFFSET - MAZE_SIZE * DOT_SIZE, MAZE_SIZE * DOT_SIZE, MAZE_SIZE * DOT_SIZE);
-  maze_layer = layer_create(frame);
+  GRect maze_frame = GRect(X_OFFSET, bounds.size.h - Y_OFFSET - MAZE_SIZE * DOT_SIZE, MAZE_SIZE * DOT_SIZE, MAZE_SIZE * DOT_SIZE);
+  maze_layer = layer_create(maze_frame);
   layer_add_child(main_window_layer, maze_layer);
   layer_set_update_proc(maze_layer, update_maze);
+
+  GRect bt_frame = GRect(bounds.size.w - BT_WIDTH - X_OFFSET - BATTERY_WIDTH - ICON_OFFSET, Y_OFFSET, BT_WIDTH, BT_HEIGHT);
+  bt_layer = layer_create(bt_frame);
+  layer_add_child(main_window_layer, bt_layer);
+  layer_set_update_proc(bt_layer, update_bt);
+
+  GRect battery_rect = GRect(bounds.size.w - BATTERY_WIDTH - X_OFFSET, Y_OFFSET + (BT_HEIGHT - BATTERY_HEIGHT) / 2, BATTERY_WIDTH, BATTERY_HEIGHT);
+  battery_layer = layer_create(battery_rect);
+  layer_add_child(main_window_layer, battery_layer);
+  layer_set_update_proc(battery_layer, update_battery);
 }
 
 static void main_window_unload(Window *window) {
+  layer_destroy(bt_layer);
+  layer_destroy(maze_layer);
+
   destroy_resources();
 }
 
@@ -210,10 +277,17 @@ static void init() {
   });
 
   window_stack_push(main_window, true);
-  tick_timer_service_subscribe(SECOND_UNIT, tick_handler);
+
+  tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
+  bluetooth_connection_service_subscribe(bt_handler);
+  battery_state_service_subscribe(battery_handler);
 }
 
 static void deinit() {
+  tick_timer_service_unsubscribe();
+  bluetooth_connection_service_unsubscribe();
+  battery_state_service_unsubscribe();
+
   window_destroy(main_window);
 }
 

@@ -4,6 +4,7 @@
         ""
     ],
     "companyName": "Uladzimir Palekh",
+    "enableMultiJS": false,
     "longName": "PebbleMaze",
     "projectType": "native",
     "resources": {
@@ -26,9 +27,14 @@
             }
         ]
     },
+    "sdkVersion": "3",
     "shortName": "PebbleMaze",
+    "targetPlatforms": [
+        "aplite",
+        "basalt",
+        "chalk"
+    ],
     "uuid": "4e2f7601-0065-4d0a-86a6-1fb22006df84",
-    "versionCode": 1,
     "versionLabel": "1.0",
     "watchapp": {
         "watchface": true

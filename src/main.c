@@ -20,6 +20,10 @@
 #define DATE_FORMAT "%a %D"
 #define DATE_BUFFER_LEN 30
 
+#define BG_COLOR GColorBlack
+#define FG_COLOR PBL_IF_COLOR_ELSE(GColorScreaminGreen, GColorWhite)
+#define TITLE_COLOR GColorWhite
+
 static const int maze_background[MAZE_SIZE] = {
   0b000001000010010,
   0b010111011111000,
@@ -129,9 +133,9 @@ static void draw_dot(GContext *ctx, int x, int y, bool show) {
   GRect rect = GRect(x_position, y_position, DOT_SIZE, DOT_SIZE);
 
   if (show) {
-    graphics_context_set_fill_color(ctx, GColorBlack);
+    graphics_context_set_fill_color(ctx, BG_COLOR);
   } else {
-    graphics_context_set_fill_color(ctx, GColorWhite);
+    graphics_context_set_fill_color(ctx, FG_COLOR);
   }
 
   graphics_fill_rect(ctx, rect, 0, GCornerNone);
@@ -172,7 +176,7 @@ static void fill_layer(Layer *layer, GContext *ctx, GColor color) {
 }
 
 static void update_main_layer(Layer *layer, GContext* ctx) {
-  fill_layer(layer, ctx, GColorBlack);
+  fill_layer(layer, ctx, BG_COLOR);
 }
 
 static void draw_time(GContext *ctx) {
@@ -219,7 +223,7 @@ static void update_bt(Layer *layer, GContext *ctx) {
   if (bluetooth_connection_service_peek()) {
     graphics_draw_bitmap_in_rect(ctx, bmp_bt, rect);
   } else {
-    graphics_context_set_fill_color(ctx, GColorBlack);
+    graphics_context_set_fill_color(ctx, BG_COLOR);
     graphics_fill_rect(ctx, rect, 0, GCornerNone);
   }
 }
@@ -286,8 +290,8 @@ static void main_window_load(Window *window) {
   GRect date_rect = GRect(X_OFFSET, DATE_Y_OFFSET, bounds.size.w - bt_frame.size.w - battery_frame.size.w - (X_OFFSET + ICON_OFFSET) * 2, DATE_HEIGHT);
   date_layer = text_layer_create(date_rect);
   text_layer_set_text_alignment(date_layer, GTextAlignmentLeft);
-  text_layer_set_text_color(date_layer, GColorWhite);
-  text_layer_set_background_color(date_layer, GColorBlack);
+  text_layer_set_text_color(date_layer, TITLE_COLOR);
+  text_layer_set_background_color(date_layer, BG_COLOR);
   text_layer_set_font(date_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
   layer_add_child(main_window_layer, text_layer_get_layer(date_layer));
 }
@@ -302,6 +306,7 @@ static void main_window_unload(Window *window) {
 }
 
 static void init() {
+  setlocale(LC_TIME, "");
   main_window = window_create();
 
   window_set_window_handlers(main_window, (WindowHandlers){

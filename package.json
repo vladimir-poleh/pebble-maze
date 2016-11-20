@@ -1,0 +1,44 @@
+{
+    "author": "Uladzimir Palekh",
+    "dependencies": {},
+    "keywords": [],
+    "name": "pebblemaze",
+    "pebble": {
+        "displayName": "PebbleMaze",
+        "enableMultiJS": true,
+        "messageKeys": [],
+        "projectType": "native",
+        "resources": {
+            "media": [
+                {
+                    "file": "images/icon.png",
+                    "menuIcon": true,
+                    "name": "ICON",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/battery.png",
+                    "name": "BATTERY",
+                    "type": "png"
+                },
+                {
+                    "file": "images/bluetooth.png",
+                    "name": "BT",
+                    "type": "png"
+                }
+            ]
+        },
+        "sdkVersion": "3",
+        "targetPlatforms": [
+            "aplite",
+            "basalt",
+            "chalk"
+        ],
+        "uuid": "4e2f7601-0065-4d0a-86a6-1fb22006df84",
+        "watchapp": {
+            "watchface": true
+        }
+    },
+    "version": "1.1.0"
+}

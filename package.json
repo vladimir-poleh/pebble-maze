@@ -11,21 +11,23 @@
         "resources": {
             "media": [
                 {
-                    "file": "images/icon.png",
-                    "menuIcon": true,
-                    "name": "ICON",
+                    "file": "images/bluetooth.png",
+                    "name": "BT",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
                 {
                     "file": "images/battery.png",
                     "name": "BATTERY",
-                    "type": "png"
+                    "targetPlatforms": null,
+                    "type": "bitmap"
                 },
                 {
-                    "file": "images/bluetooth.png",
-                    "name": "BT",
-                    "type": "png"
+                    "file": "images/icon.png",
+                    "menuIcon": true,
+                    "name": "ICON",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
                 }
             ]
         },

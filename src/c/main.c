@@ -2,8 +2,8 @@
 #include <time.h>
 
 #define DOT_SIZE 9
-#define X_OFFSET 5
-#define Y_OFFSET 5
+#define X_OFFSET PBL_IF_RECT_ELSE(5, 22)
+#define Y_OFFSET PBL_IF_RECT_ELSE(5, 18)
 #define ICON_OFFSET 3
 #define MAZE_SIZE 15
 #define DIGIT_SIZE 5
@@ -16,7 +16,7 @@
 
 #define DATE_HEIGHT 21
 
-#define DATE_Y_OFFSET -2
+#define DATE_Y_OFFSET PBL_IF_RECT_ELSE(-2, 4)
 #define DATE_FORMAT "%a %D"
 #define DATE_BUFFER_LEN 30
 
@@ -277,19 +277,28 @@ static void main_window_load(Window *window) {
   layer_add_child(main_window_layer, maze_layer);
   layer_set_update_proc(maze_layer, update_maze);
 
+#if defined(PBL_RECT)
   GRect bt_frame = GRect(bounds.size.w - BT_WIDTH - X_OFFSET - BATTERY_WIDTH - ICON_OFFSET, Y_OFFSET, BT_WIDTH, BT_HEIGHT);
+  GRect battery_frame = GRect(bounds.size.w - BATTERY_WIDTH - X_OFFSET, Y_OFFSET + (BT_HEIGHT - BATTERY_HEIGHT) / 2, BATTERY_WIDTH, BATTERY_HEIGHT);
+  GRect date_rect = GRect(X_OFFSET, DATE_Y_OFFSET, bounds.size.w - bt_frame.size.w - battery_frame.size.w - (X_OFFSET + ICON_OFFSET) * 2, DATE_HEIGHT);
+#else
+  int bt_battery_width = BT_WIDTH + ICON_OFFSET + BATTERY_WIDTH;
+  int bt_x = (bounds.size.w - bt_battery_width) / 2;
+  GRect bt_frame = GRect(bt_x, bounds.size.h - DATE_Y_OFFSET - BT_HEIGHT, BT_WIDTH, BT_HEIGHT);
+  GRect battery_frame = GRect(bt_x + BT_WIDTH + ICON_OFFSET, bounds.size.h - DATE_Y_OFFSET - BT_HEIGHT + (BT_HEIGHT - BATTERY_HEIGHT) / 2, BATTERY_WIDTH, BATTERY_HEIGHT);
+  GRect date_rect = GRect(0, DATE_Y_OFFSET, bounds.size.w, DATE_HEIGHT);
+#endif
+
   bt_layer = layer_create(bt_frame);
   layer_add_child(main_window_layer, bt_layer);
   layer_set_update_proc(bt_layer, update_bt);
 
-  GRect battery_frame = GRect(bounds.size.w - BATTERY_WIDTH - X_OFFSET, Y_OFFSET + (BT_HEIGHT - BATTERY_HEIGHT) / 2, BATTERY_WIDTH, BATTERY_HEIGHT);
   battery_layer = layer_create(battery_frame);
   layer_add_child(main_window_layer, battery_layer);
   layer_set_update_proc(battery_layer, update_battery);
 
-  GRect date_rect = GRect(X_OFFSET, DATE_Y_OFFSET, bounds.size.w - bt_frame.size.w - battery_frame.size.w - (X_OFFSET + ICON_OFFSET) * 2, DATE_HEIGHT);
   date_layer = text_layer_create(date_rect);
-  text_layer_set_text_alignment(date_layer, GTextAlignmentLeft);
+  text_layer_set_text_alignment(date_layer, PBL_IF_RECT_ELSE(GTextAlignmentLeft, GTextAlignmentCenter));
   text_layer_set_text_color(date_layer, TITLE_COLOR);
   text_layer_set_background_color(date_layer, BG_COLOR);
   text_layer_set_font(date_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));

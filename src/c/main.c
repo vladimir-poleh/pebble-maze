@@ -14,6 +14,12 @@
 #define BT_WIDTH 7
 #define BT_HEIGHT 11
 
+#define QUIET_WIDTH 8
+#define QUIET_HEIGHT 9
+
+#define STATUS_WIDTH (BT_WIDTH + QUIET_WIDTH + ICON_OFFSET)
+#define STATUS_HEIGHT 11
+
 #define DATE_HEIGHT 21
 
 #define DATE_Y_OFFSET PBL_IF_RECT_ELSE(-2, 4)
@@ -108,20 +114,23 @@ static const int digits[10][DIGIT_SIZE] = {
 static Window *main_window;
 static Layer *maze_layer;
 static Layer *battery_layer;
-static Layer *bt_layer;
+static Layer *status_layer;
 static TextLayer *date_layer;
 
+static GBitmap *bmp_quiet;
 static GBitmap *bmp_bt;
 static GBitmap *bmp_battery;
 
 static char date_buffer[DATE_BUFFER_LEN];
 
 static void load_resources() {
+  bmp_quiet = gbitmap_create_with_resource(RESOURCE_ID_QUIET);
   bmp_bt = gbitmap_create_with_resource(RESOURCE_ID_BT);
   bmp_battery = gbitmap_create_with_resource(RESOURCE_ID_BATTERY);
 }
 
 static void destroy_resources() {
+  gbitmap_destroy(bmp_quiet);
   gbitmap_destroy(bmp_bt);
   gbitmap_destroy(bmp_battery);
 }
@@ -217,14 +226,22 @@ static void update_maze(Layer *layer, GContext *ctx) {
   draw_time(ctx);
 }
 
-static void update_bt(Layer *layer, GContext *ctx) {
-  GRect rect = GRect(0, 0, BT_WIDTH, BT_HEIGHT);
+static void update_status(Layer *layer, GContext *ctx) {
+  GRect rect = GRect(0, 0, STATUS_WIDTH, STATUS_HEIGHT);
+  graphics_context_set_fill_color(ctx, BG_COLOR);
 
+  graphics_fill_rect(ctx, rect, 0, GCornerNone);
+
+  int x = STATUS_WIDTH;
   if (bluetooth_connection_service_peek()) {
+    rect = GRect(x - BT_WIDTH, (STATUS_HEIGHT - BT_HEIGHT) / 2, BT_WIDTH, BT_HEIGHT);
     graphics_draw_bitmap_in_rect(ctx, bmp_bt, rect);
-  } else {
-    graphics_context_set_fill_color(ctx, BG_COLOR);
-    graphics_fill_rect(ctx, rect, 0, GCornerNone);
+    x -= (BT_WIDTH + ICON_OFFSET);
+  }
+
+  if (quiet_time_is_active()) {
+    rect = GRect(x - QUIET_WIDTH, (STATUS_HEIGHT - QUIET_HEIGHT) / 2, QUIET_WIDTH, QUIET_HEIGHT);
+    graphics_draw_bitmap_in_rect(ctx, bmp_quiet, rect);
   }
 }
 
@@ -258,7 +275,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 }
 
 static void bt_handler(bool connected) {
-  layer_mark_dirty(bt_layer);
+  layer_mark_dirty(status_layer);
 }
 
 static void battery_handler(BatteryChargeState charge_state) {
@@ -278,20 +295,23 @@ static void main_window_load(Window *window) {
   layer_set_update_proc(maze_layer, update_maze);
 
 #if defined(PBL_RECT)
-  GRect bt_frame = GRect(bounds.size.w - BT_WIDTH - X_OFFSET - BATTERY_WIDTH - ICON_OFFSET, Y_OFFSET, BT_WIDTH, BT_HEIGHT);
-  GRect battery_frame = GRect(bounds.size.w - BATTERY_WIDTH - X_OFFSET, Y_OFFSET + (BT_HEIGHT - BATTERY_HEIGHT) / 2, BATTERY_WIDTH, BATTERY_HEIGHT);
-  GRect date_rect = GRect(X_OFFSET, DATE_Y_OFFSET, bounds.size.w - bt_frame.size.w - battery_frame.size.w - (X_OFFSET + ICON_OFFSET) * 2, DATE_HEIGHT);
+  int w = bounds.size.w - X_OFFSET;
+  GRect status_frame = GRect(w - STATUS_WIDTH - BATTERY_WIDTH - ICON_OFFSET, Y_OFFSET, STATUS_WIDTH, STATUS_HEIGHT);
+  GRect battery_frame = GRect(w - BATTERY_WIDTH, Y_OFFSET + (BT_HEIGHT - BATTERY_HEIGHT) / 2, BATTERY_WIDTH, BATTERY_HEIGHT);
+  GRect date_rect = GRect(X_OFFSET, DATE_Y_OFFSET, w - STATUS_WIDTH - BATTERY_WIDTH - ICON_OFFSET * 2 - X_OFFSET, DATE_HEIGHT);
 #else
-  int bt_battery_width = BT_WIDTH + ICON_OFFSET + BATTERY_WIDTH;
-  int bt_x = (bounds.size.w - bt_battery_width) / 2;
-  GRect bt_frame = GRect(bt_x, bounds.size.h - DATE_Y_OFFSET - BT_HEIGHT, BT_WIDTH, BT_HEIGHT);
-  GRect battery_frame = GRect(bt_x + BT_WIDTH + ICON_OFFSET, bounds.size.h - DATE_Y_OFFSET - BT_HEIGHT + (BT_HEIGHT - BATTERY_HEIGHT) / 2, BATTERY_WIDTH, BATTERY_HEIGHT);
-  GRect date_rect = GRect(0, DATE_Y_OFFSET, bounds.size.w, DATE_HEIGHT);
+  int w = bounds.size.w;
+  int h = bounds.size.h;
+  int status_battery_width = STATUS_WIDTH + ICON_OFFSET + BATTERY_WIDTH;
+  int status_x = (w - status_battery_width) / 2;
+  GRect status_frame = GRect(status_x, h - DATE_Y_OFFSET - STATUS_HEIGHT, STATUS_WIDTH, STATUS_HEIGHT);;
+  GRect battery_frame = GRect(status_x + STATUS_WIDTH + ICON_OFFSET, h - DATE_Y_OFFSET - STATUS_HEIGHT + (STATUS_HEIGHT - BATTERY_HEIGHT) / 2, BATTERY_WIDTH, BATTERY_HEIGHT);
+  GRect date_rect = GRect(0, DATE_Y_OFFSET, w, DATE_HEIGHT);
 #endif
-
-  bt_layer = layer_create(bt_frame);
-  layer_add_child(main_window_layer, bt_layer);
-  layer_set_update_proc(bt_layer, update_bt);
+  
+  status_layer = layer_create(status_frame);
+  layer_add_child(main_window_layer, status_layer);
+  layer_set_update_proc(status_layer, update_status);
 
   battery_layer = layer_create(battery_frame);
   layer_add_child(main_window_layer, battery_layer);
@@ -307,7 +327,7 @@ static void main_window_load(Window *window) {
 
 static void main_window_unload(Window *window) {
   layer_destroy(maze_layer);
-  layer_destroy(bt_layer);
+  layer_destroy(status_layer);
   layer_destroy(battery_layer);
   text_layer_destroy(date_layer);
 

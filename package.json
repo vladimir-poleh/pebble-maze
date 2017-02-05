@@ -11,6 +11,17 @@
         "resources": {
             "media": [
                 {
+                    "file": "images/quiet.png",
+                    "name": "QUIET",
+                    "targetPlatforms": [
+                        "aplite",
+                        "basalt",
+                        "chalk",
+                        "diorite"
+                    ],
+                    "type": "bitmap"
+                },
+                {
                     "file": "images/bluetooth.png",
                     "name": "BT",
                     "targetPlatforms": null,
